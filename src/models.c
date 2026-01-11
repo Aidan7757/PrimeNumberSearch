@@ -1,5 +1,4 @@
-
-struct config {
+struct {
     int num_threads;
     long lower_range;
     long max_range;
