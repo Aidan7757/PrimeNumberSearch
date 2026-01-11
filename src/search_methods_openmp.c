@@ -7,10 +7,24 @@
 
 #include "models.h"
 
+// Modular exponentiation: computes (base^exp) % mod
+unsigned long long mod_pow(unsigned long long base, unsigned long long exp, unsigned long long mod) {
+    unsigned long long res = 1;
+    base %= mod;
 
-int factor_out_twos(const long potential_prime, long* d) {
-    long value = potential_prime - 1;
-    int s = 0;
+    while (exp > 0) {
+        if (exp & 1) {
+            res = (res * base) % mod;
+        }
+        base = (base * base) % mod;
+        exp >>= 1;
+    }
+    return res;
+}
+
+long factor_out_twos(const unsigned long long potential_prime, unsigned long long* d) {
+    unsigned long long value = potential_prime - 1;
+    long s = 0;
 
     while (value % 2 == 0) {
         value /= 2;
@@ -26,12 +40,10 @@ int factor_out_twos(const long potential_prime, long* d) {
  * @param config config
  * @return true or false on if the number is detected to be prime or not.
  */
-bool naive_check(const long potential_prime, struct Config* config) {
-
-    if (potential_prime == 1) return true;
+bool naive_check(const long long potential_prime, struct Config* config) {
+    if (potential_prime <= 1) return false;
     if (potential_prime == 2) return true;
-
-    // go through and mod with each number until potential prime - 1, if mod == 0 then non prime
+    if (potential_prime % 2 == 0) return false;
 
     bool overall_result = true;
 
@@ -44,37 +56,51 @@ bool naive_check(const long potential_prime, struct Config* config) {
 }
 
 /**
- * Miller-Rabin primality test, probabilistic primality test. Link: https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test
+ * Miller-Rabin primality test, probabilistic primality test.
+ * Link: https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test
  *
  * @param potential_prime prime to check.
  * @param config settings.
  * @return true or false on if likely to be prime or not.
  */
-bool miller_rabin(const long potential_prime, const struct Config* config) {
-    if (potential_prime == 1) return true;
-    if (potential_prime == 2) return true;
+bool miller_rabin(const long long potential_prime, const struct Config* config) {
+    // Handle base cases
+    if (potential_prime <= 1) return false;
+    if (potential_prime == 2 || potential_prime == 3) return true;
+    if (potential_prime % 2 == 0) return false;
 
-    long d;
-    const int s = factor_out_twos(potential_prime, &d);
-    const long range_size = (potential_prime - 2) - 2 + 1;
-    bool overall_result = true;
+    // Factor out powers of 2: potential_prime - 1 = 2^s * d
+    unsigned long long d;
+    const long s = factor_out_twos(potential_prime, &d);
 
-    #pragma omp parallel num_threads(config->num_threads)
-    #pragma omp parallel for
-    for (size_t i = 0; i < config->num_rounds; ++i) {
+    // Perform k rounds of testing
+    for (size_t round = 0; round < config->num_rounds; ++round) {
+        // Pick random witness a in range [2, potential_prime - 2]
+        unsigned int seed = (unsigned int)(time(NULL) + round + omp_get_thread_num());
+        const unsigned long long a = (rand_r(&seed) % (potential_prime - 3)) + 2;
 
-        unsigned int seed = omp_get_thread_num() * time(NULL); // random value using thread_num and time
-        const long a = rand_r(&seed) % range_size + 2;
-        long x = (int) pow((double) a, (double) d) % potential_prime;
-        long y = 0;
+        // Compute x = a^d mod potential_prime
+        unsigned long long x = mod_pow(a, d, potential_prime);
 
-        for (size_t j = 0; j < s; ++j) {
-            y = (int) pow((double) x, 2.0) % potential_prime;
-            if (y == 1 && x != 1 && x != potential_prime - 1) overall_result = false;
-            x = y;
+        if (x == 1 || x == potential_prime - 1) {
+            continue;
         }
-        if (y != 1) overall_result = false;
+
+        // Square x repeatedly (s-1) times
+        bool composite = true;
+        for (long j = 0; j < s - 1; ++j) {
+            x = mod_pow(x, 2, potential_prime);
+
+            if (x == potential_prime - 1) {
+                composite = false;
+                break;
+            }
+        }
+
+        if (composite) {
+            return false;
+        }
     }
 
-    return overall_result;
+    return true;
 }
