@@ -28,7 +28,8 @@ void miller_rabin_test() {
     }
 
     const double start_overall = omp_get_wtime();
-    #pragma omp parallel num_threads(config.num_threads)
+    long prime_count = 0;
+    #pragma omp parallel for num_threads(config.num_threads)
     for (long long i = config.lower_range; i < config.max_range; ++i) {
         const double start = omp_get_wtime();
         const bool result = miller_rabin(i, &config);
@@ -38,12 +39,13 @@ void miller_rabin_test() {
             #pragma omp critical
             fprintf(fptr, "Potential prime: %lli took %f seconds to compute.\n", i, cpu_time_used);
             printf("Potential prime: %lli took %f seconds to compute.\n", i, cpu_time_used);
+            prime_count += 1;
         }
     }
     const double final_overall = omp_get_wtime();
     const double overall_cpu_time = final_overall - start_overall;
     fclose(fptr);
-    printf("Overall time taken for %li iterations: %f seconds.\n", config.max_range, overall_cpu_time);
+    printf("Overall time taken for %li iterations: %f seconds. Total primes: %li. \n", config.max_range, overall_cpu_time, prime_count);
 }
 
 bool naive_check_test() {
