@@ -178,3 +178,78 @@ bool gauss_euler(const long long potential_prime) {
 
     return true;
 }
+
+/**
+ * Combined Miller-Rabin and Gauss-Euler primality test.
+ * Hybrid approach combining both methods for enhanced primality testing.
+ *
+ * @param potential_prime the number to check primality of.
+ * @param config struct config (for consistency with other functions).
+ * @return true or false if the number is prime.
+ */
+bool mr_ge(const long long potential_prime, const struct Config* config) {
+    if (potential_prime == 2 || potential_prime == 3 ||
+        potential_prime == 5 || potential_prime == 7) {
+        return true;
+    }
+    if (potential_prime < 2 || !(potential_prime & 1)) {
+        return false;
+    }
+
+    const unsigned long long n = (unsigned long long)potential_prime;
+
+    unsigned long long t = n - 1;
+    long long s = 0;
+    while (!(t & 1)) {
+        s++;
+        t >>= 1;
+    }
+
+    const unsigned long long m = (unsigned long long)sqrt((double)n);
+    const unsigned long long r = (unsigned long long)sqrt((double)n / 2);
+    const unsigned long long prime[5] = {2, m + 1, m - 1, r + 1, r - 1};
+
+    for (size_t x = 0; x < config->num_rounds; x++) {
+        const unsigned long long a = prime[x];
+        unsigned long long b = mod_pow(a, t, n);
+
+        for (long long y = 1; y <= s; y++) {
+            const unsigned long long k = mod_mul(b, b, n);
+
+            if (k == 1 && b != 1 && b != n - 1) {
+                return false;
+            }
+            b = k;
+        }
+
+        if (b != 1) {
+            return false;
+        }
+    }
+
+    unsigned long long p;
+    for (p = 3; ; p += 4) {
+        unsigned long long i;
+        for (i = 3; i * i < p; i += 2) {
+            if (p % i == 0) break;
+        }
+
+        unsigned long long j;
+        for (j = 1; j <= (p - 1) / 2; j++) {
+            if (i * i < p || n % p == 0 || n % p == (j * j) % p) {
+                break;
+            }
+        }
+
+        if (i * i > p && j > (p - 1) / 2) {
+            break;
+        }
+    }
+
+    const unsigned long long d = mod_pow(p, (n - 1) / 2, n);
+    if ((n % 4 == 1 && d != n - 1) || (n % 4 == 3 && d != 1)) {
+        return false;
+    }
+
+    return true;
+}
