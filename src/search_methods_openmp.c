@@ -183,11 +183,13 @@ bool gauss_euler(const long long potential_prime) {
  * Combined Miller-Rabin and Gauss-Euler primality test.
  * Hybrid approach combining both methods for enhanced primality testing.
  *
+ * Link: https://arxiv.org/pdf/2311.07048
+ *
  * @param potential_prime the number to check primality of.
- * @param config struct config (for consistency with other functions).
+ * @param config struct config.
  * @return true or false if the number is prime.
  */
-bool mr_ge(const long long potential_prime, const struct Config* config) {
+bool mr_ge(const long long potential_prime) {
     if (potential_prime == 2 || potential_prime == 3 ||
         potential_prime == 5 || potential_prime == 7) {
         return true;
@@ -209,7 +211,7 @@ bool mr_ge(const long long potential_prime, const struct Config* config) {
     const unsigned long long r = (unsigned long long)sqrt((double)n / 2);
     const unsigned long long prime[5] = {2, m + 1, m - 1, r + 1, r - 1};
 
-    for (size_t x = 0; x < config->num_rounds; x++) {
+    for (size_t x = 0; x < 5; x++) {
         const unsigned long long a = prime[x];
         unsigned long long b = mod_pow(a, t, n);
 
