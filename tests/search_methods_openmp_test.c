@@ -95,6 +95,47 @@ void fermat_test_predefined_arrays() {
     }
 }
 
+void gauss_euler_test_predefined_arrays() {
+
+    struct Config config = {3, 1, 1, 20}; // values dont matter
+
+    #pragma omp parallel for num_threads(config.num_threads)
+    for (size_t i = 0; i < TEST_ARRAY_SIZES; ++i) {
+        const bool prime_result = gauss_euler(TEST_PRIMES[i], &config);
+        const bool composite_result = gauss_euler(TEST_COMPOSITE[i], &config);
+
+        if (!prime_result) {
+            printf("Failed prime number check for %d\n", TEST_PRIMES[i]);
+        }
+        if (composite_result) {
+            printf("Failed composite number check for %d\n", TEST_COMPOSITE[i]);
+        };
+    }
+}
+
+void gauss_euler_test() {
+
+    struct Config config = {8, 1, 100000000, 20};
+
+    long prime_count = 0;
+    const double start_time = omp_get_wtime();
+    for (long i = 0; i < config.max_range; ++i) {
+        const double start_time_p = omp_get_wtime();
+        const bool prime_result = gauss_euler(i, &config);
+        const double end_time_p = omp_get_wtime();
+        const double cpu_time_used = end_time_p - start_time_p;
+
+        if (prime_result) {
+            printf("Potential prime: %li took %f seconds to compute.\n", i, cpu_time_used);
+            ++prime_count;
+        }
+
+    }
+    const double final_time = omp_get_wtime();
+    const double overall_cpu_time = final_time - start_time;
+    printf("Overall time taken for %li iterations: %f seconds. Total primes: %li. \n", config.max_range, overall_cpu_time, prime_count);
+}
+
 bool naive_check_test() {
 
     struct Config config = {3, 1, 1, 1}; // values dont matter
@@ -120,7 +161,9 @@ bool naive_check_test() {
 }
 
 int main() {
-    fermat_test();
+    // fermat_test();
     // naive_check_test();
     // miller_rabin_test();
+    // gauss_euler_test_predefined_arrays();
+    gauss_euler_test();
 }

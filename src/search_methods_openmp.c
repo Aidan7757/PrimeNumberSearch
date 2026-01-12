@@ -101,7 +101,73 @@ bool fermat(const long long potential_prime, const struct Config* config) {
     return true;
 }
 
-bool mr_ge(const long long potential_prime, const struct Config* config) {
+bool gauss_euler(const long long potential_prime, const struct Config* config) {
+    if (potential_prime == 2) return true;
+    if (!(potential_prime & 1) || potential_prime < 2) return false;
+
+    const unsigned long long n = (unsigned long long)potential_prime;
+
+    // Euler criterion for 2
+    unsigned long long t = mod_pow(2, (n - 1) / 2, n);
+    if ((n % 8 == 1 || n % 8 == 7) && t != 1) {
+        return false;
+    }
+    if ((n % 8 == 3 || n % 8 == 5) && t != n - 1) {
+        return false;
+    }
+
+    // Check powers near sqrt(n) and sqrt(n/2)
+    for (int j = 1; j <= 2; j++) {
+        unsigned long long a = (unsigned long long)sqrt((double)n / j);
+        for (unsigned long long i = a; i <= a + 1; i++) {
+            unsigned long long q = mod_pow(i, (n - 1) / 2, n);
+            if (q != 1 && q != n - 1) return false;
+        }
+    }
+
+    // Find first prime p1 ≡ 5 (mod 8) where n is not a quadratic residue
+    unsigned long long p1;
+    for (p1 = 5; ; p1 += 8) {
+        // Check if p1 is prime
+        unsigned long long i;
+        for (i = 3; i * i <= p1; i += 2) {
+            if (p1 % i == 0) break;
+        }
+
+        // Check if n is a quadratic non-residue mod p1
+        unsigned long long j;
+        for (j = 1; j <= (p1 - 1) / 2; j++) {
+            if (i * i <= p1 || n % p1 == 0 || n % p1 == (j * j) % p1) break;
+        }
+
+        if (i * i > p1 && j > (p1 - 1) / 2) break;
+    }
+
+    if (mod_pow(p1, (n - 1) / 2, n) != n - 1) {
+        return false;
+    }
+
+    // Find first prime p2 ≡ 1 (mod 8) where n is not a quadratic residue
+    unsigned long long p2;
+    for (p2 = 17; ; p2 += 8) {
+        // Check if p2 is prime
+        unsigned long long i;
+        for (i = 3; i * i <= p2; i += 2) {
+            if (p2 % i == 0) break;
+        }
+
+        // Check if n is a quadratic non-residue mod p2
+        unsigned long long j;
+        for (j = 1; j <= (p2 - 1) / 2; j++) {
+            if (i * i <= p2 || n % p2 == 0 || n % p2 == (j * j) % p2) break;
+        }
+
+        if (i * i > p2 && j > (p2 - 1) / 2) break;
+    }
+
+    if (mod_pow(p2, (n - 1) / 2, n) != n - 1) {
+        return false;
+    }
 
     return true;
 }
