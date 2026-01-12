@@ -101,7 +101,14 @@ bool fermat(const long long potential_prime, const struct Config* config) {
     return true;
 }
 
-bool gauss_euler(const long long potential_prime, const struct Config* config) {
+/**
+ * Gauss Euler primality test. Link: https://arxiv.org/pdf/2311.07048
+ *
+ * @param potential_prime prime to check
+
+ * @return
+ */
+bool gauss_euler(const long long potential_prime) {
     if (potential_prime == 2) return true;
     if (!(potential_prime & 1) || potential_prime < 2) return false;
 

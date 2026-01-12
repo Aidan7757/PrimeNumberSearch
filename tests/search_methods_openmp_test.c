@@ -53,6 +53,8 @@ void fermat_test() {
 
     long prime_count = 0;
     const double start_time = omp_get_wtime();
+
+    #pragma omp parallel for num_threads(config.num_threads)
     for (long i = 0; i < config.max_range; ++i) {
         const double start_time_p = omp_get_wtime();
         const bool prime_result = fermat(i, &config);
@@ -101,8 +103,8 @@ void gauss_euler_test_predefined_arrays() {
 
     #pragma omp parallel for num_threads(config.num_threads)
     for (size_t i = 0; i < TEST_ARRAY_SIZES; ++i) {
-        const bool prime_result = gauss_euler(TEST_PRIMES[i], &config);
-        const bool composite_result = gauss_euler(TEST_COMPOSITE[i], &config);
+        const bool prime_result = gauss_euler(TEST_PRIMES[i]);
+        const bool composite_result = gauss_euler(TEST_COMPOSITE[i]);
 
         if (!prime_result) {
             printf("Failed prime number check for %d\n", TEST_PRIMES[i]);
@@ -115,13 +117,14 @@ void gauss_euler_test_predefined_arrays() {
 
 void gauss_euler_test() {
 
-    struct Config config = {8, 1, 100000000, 20};
+    struct Config config = {8, 1000000000, 2000000000, 20};
 
     long prime_count = 0;
     const double start_time = omp_get_wtime();
+    #pragma omp parallel for num_threads(config.num_threads)
     for (long i = 0; i < config.max_range; ++i) {
         const double start_time_p = omp_get_wtime();
-        const bool prime_result = gauss_euler(i, &config);
+        const bool prime_result = gauss_euler(i);
         const double end_time_p = omp_get_wtime();
         const double cpu_time_used = end_time_p - start_time_p;
 
