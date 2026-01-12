@@ -90,13 +90,18 @@ bool miller_rabin(const long long potential_prime, const struct Config* config) 
 bool fermat(const long long potential_prime, const struct Config* config) {
     if (potential_prime == 1) return false;
     if (potential_prime == 2 || potential_prime == 3) return true;
-    if (potential_prime % 2 ==0) return false;
+    if (potential_prime % 2 == 0) return false;
 
     for (size_t i = 2; i < config->num_rounds; ++i) {
         unsigned int seed = (unsigned int)(time(NULL) + i + omp_get_thread_num());
         const unsigned long long a = (rand_r(&seed) % (potential_prime - 3)) + 2;
-        const unsigned long long a_exponent = non_mod_pow(a, potential_prime - 1);
-        if (a_exponent % potential_prime == 0) return false;
+        const unsigned long long result = mod_pow(a, potential_prime - 1, potential_prime);
+        if (result != 1) return false;
     }
+    return true;
+}
+
+bool mr_ge(const long long potential_prime, const struct Config* config) {
+
     return true;
 }
