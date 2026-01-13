@@ -11,6 +11,15 @@
 #define CUDA_DEVICE_FN static inline
 #endif
 
+// Conditional compilation for CUDA
+#ifdef __CUDACC__
+#define CUDA_DEVICE_FN __device__ __forceinline__
+#define CUDA_GLOBAL_FN __global__
+#else
+#define CUDA_DEVICE_FN static inline
+#define CUDA_GLOBAL_FN
+#endif
+
 // Configuration for Schönhage-Strassen
 #define SS_MIN_BITS 1024  // Minimum bit size where SS is beneficial
 #define SS_BASE_CHUNK 32  // Base chunk size in bits
@@ -42,7 +51,7 @@ CUDA_DEVICE_FN void ss_pointwise_multiply(fft_workspace_t* a, fft_workspace_t* b
 CUDA_DEVICE_FN void ss_convolution(polynomial_t* a, polynomial_t* b, polynomial_t* result);
 
 // Kernel for batch Schönhage-Strassen multiplication
-__global__ void schonhage_strassen_kernel(const uint64_t* a, const uint64_t* b, const uint64_t* mod, uint64_t* result, int count);
+CUDA_GLOBAL_FN void schonhage_strassen_kernel(const uint64_t* a, const uint64_t* b, const uint64_t* mod, uint64_t* result, int count);
 
 // Host wrapper
 void cuda_schonhage_strassen_multiply(const uint64_t* a, const uint64_t* b, const uint64_t* mod, uint64_t* result, int count);

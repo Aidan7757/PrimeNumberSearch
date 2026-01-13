@@ -228,7 +228,7 @@ CUDA_DEVICE_FN uint64_t cuda_fast_mod_mul(uint64_t a, uint64_t b, uint64_t mod) 
 
 // CUDA kernel for batch FFT multiplication
 #ifdef HAVE_CUDA
-__global__ void fft_multiply_kernel(const uint64_t* a, const uint64_t* b, uint64_t* result, int count) {
+CUDA_GLOBAL_FN void fft_multiply_kernel(const uint64_t* a, const uint64_t* b, uint64_t* result, int count) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     
     if (idx < count) {
@@ -236,7 +236,7 @@ __global__ void fft_multiply_kernel(const uint64_t* a, const uint64_t* b, uint64
     }
 }
 
-__global__ void fast_mod_mul_kernel(const uint64_t* a, const uint64_t* b, const uint64_t* mod, uint64_t* result, int count) {
+CUDA_GLOBAL_FN void fast_mod_mul_kernel(const uint64_t* a, const uint64_t* b, const uint64_t* mod, uint64_t* result, int count) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     
     if (idx < count) {
@@ -245,13 +245,13 @@ __global__ void fast_mod_mul_kernel(const uint64_t* a, const uint64_t* b, const 
 }
 #else
 // Fallback CPU implementations
-void fft_multiply_kernel(const uint64_t* a, const uint64_t* b, uint64_t* result, int count) {
+CUDA_GLOBAL_FN void fft_multiply_kernel(const uint64_t* a, const uint64_t* b, uint64_t* result, int count) {
     for (int i = 0; i < count; i++) {
         fft_multiply(a[i], b[i], &result[i]);
     }
 }
 
-void fast_mod_mul_kernel(const uint64_t* a, const uint64_t* b, const uint64_t* mod, uint64_t* result, int count) {
+CUDA_GLOBAL_FN void fast_mod_mul_kernel(const uint64_t* a, const uint64_t* b, const uint64_t* mod, uint64_t* result, int count) {
     for (int i = 0; i < count; i++) {
         result[i] = cuda_fast_mod_mul(a[i], b[i], mod[i]);
     }

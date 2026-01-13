@@ -9,8 +9,6 @@
 
 #include "search_methods_cuda.h"
 #include "utils.h"
-#include "fft_multiply.h"
-#include "schonhage_strassen.h"
 
 #ifndef HAVE_CUDA
 // Mock CUDA global variables
@@ -21,32 +19,45 @@ dim3 threadIdx = {0, 0, 0};
 
 // CUDA device utility functions with Schönhage-Strassen optimization
 __device__ unsigned long long cuda_mod_mul(unsigned long long a, unsigned long long b, unsigned long long mod) {
-    // Use Schönhage-Strassen for very large numbers
-    // Fall back to traditional method for smaller numbers where it's more efficient
+    // Use traditional method only - FFT and Schönhage-Strassen disabled
+    a %= mod;
+    b %= mod;
     
-    // Threshold for using Schönhage-Strassen (empirically determined)
-    const uint64_t SS_THRESHOLD = 1ULL << 20; // ~1 million
-    
-    if (a > SS_THRESHOLD || b > SS_THRESHOLD) {
-        // Use Schönhage-Strassen multiplication for very large numbers
-        return schonhage_strassen_mul(a, b, mod);
-    } else if (a > (1ULL << 16) || b > (1ULL << 16)) {
-        // Use FFT-based multiplication for medium-sized numbers
-        return cuda_fast_mod_mul(a, b, mod);
-    } else {
-        // Traditional method for smaller numbers
+    #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 300
+        // Use 128-bit multiplication on modern CUDA
+        unsigned __int128 temp = (unsigned __int128)a * b;
+        return (unsigned long long)(temp % mod);
+    #else
+        // Russian peasant algorithm for older architectures
         unsigned long long res = 0;
         a %= mod;
         
         while (b > 0) {
             if (b & 1) {
-                res = (res + a) % mod;
+                if (res >= mod - a) {
+                    res = res + a - mod;
+                } else {
+                    res = res + a;
+                }
             }
-            a = (a + a) % mod;
+            
+            if (a >= mod - a) {
+                a = a + a - mod;
+            } else {
+                a = a + a;
+            }
+            
             b >>= 1;
         }
         return res;
+    #endif
+}
+
+
+        a = (a + a) % mod;
+        b >>= 1;
     }
+    return res;
 }
 
 __device__ unsigned long long cuda_mod_pow(unsigned long long base, unsigned long long exp, unsigned long long mod) {
@@ -208,7 +219,7 @@ __device__ bool cuda_mr_ge(long long potential_prime) {
 }
 
 // CUDA kernel for parallel prime search
-__global__ void cuda_prime_search_kernel(const long long* numbers, bool* results, int count, int method, int num_rounds) {
+CUDA_GLOBAL_FN void cuda_prime_search_kernel(const long long* numbers, bool* results, int count, int method, int num_rounds) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     
     if (idx < count) {

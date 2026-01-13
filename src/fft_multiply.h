@@ -7,8 +7,10 @@
 
 #ifdef __CUDACC__
 #define CUDA_DEVICE_FN __device__ __forceinline__
+#define CUDA_GLOBAL_FN __global__
 #else
 #define CUDA_DEVICE_FN static inline
+#define CUDA_GLOBAL_FN
 #endif
 
 // Configuration for FFT-based multiplication
@@ -43,8 +45,8 @@ CUDA_DEVICE_FN void large_int_split_coeffs(large_int_t* num);
 CUDA_DEVICE_FN void large_int_from_coeffs(large_int_t* num, uint64_t* result);
 
 // Main fast multiplication kernels
-__global__ void fft_multiply_kernel(const uint64_t* a, const uint64_t* b, uint64_t* result, int count);
-__global__ void fast_mod_mul_kernel(const uint64_t* a, const uint64_t* b, const uint64_t* mod, uint64_t* result, int count);
+CUDA_GLOBAL_FN void fft_multiply_kernel(const uint64_t* a, const uint64_t* b, uint64_t* result, int count);
+CUDA_GLOBAL_FN void fast_mod_mul_kernel(const uint64_t* a, const uint64_t* b, const uint64_t* mod, uint64_t* result, int count);
 
 // Host wrapper functions
 void cuda_fft_multiply(const uint64_t* a, const uint64_t* b, uint64_t* result, int count);

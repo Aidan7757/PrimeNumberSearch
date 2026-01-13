@@ -5,6 +5,9 @@
 // Conditional CUDA compilation
 #ifdef HAVE_CUDA
 #include <cuda_runtime.h>
+#define CUDA_DEVICE_FN __device__ __forceinline__
+#define CUDA_GLOBAL_FN __global__
+#define CUDA_HOST_FN __host__
 #else
 // Fallback definitions when CUDA is not available
 typedef unsigned int uint32_t;
@@ -12,8 +15,9 @@ typedef unsigned long long uint64_t;
 
 // Mock CUDA attributes
 #define __device__
-#define __global__
-#define __host__
+#define CUDA_GLOBAL_FN
+#define CUDA_HOST_FN
+#define CUDA_DEVICE_FN static inline
 
 // Mock CUDA types
 typedef struct {
@@ -48,7 +52,7 @@ __device__ unsigned long long cuda_mod_pow(unsigned long long base, unsigned lon
 __device__ long cuda_factor_out_twos(unsigned long long potential_prime, unsigned long long* d);
 
 // CUDA kernel for parallel prime search
-__global__ void cuda_prime_search_kernel(const long long* numbers, bool* results, int count, int method, int num_rounds);
+CUDA_GLOBAL_FN void cuda_prime_search_kernel(const long long* numbers, bool* results, int count, int method, int num_rounds);
 
 // Host wrapper functions
 void cuda_prime_search(const long long* numbers, bool* results, int count, int method, int num_rounds);

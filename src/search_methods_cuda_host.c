@@ -2,8 +2,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "search_methods_cuda.h"
-#include "fft_multiply.h"
-#include "schonhage_strassen.h"
+
+
 
 // Forward declarations for CPU implementations
 static bool cpu_naive_check(long long potential_prime);
@@ -69,7 +69,15 @@ static bool cpu_miller_rabin(long long potential_prime, int num_rounds) {
     if (potential_prime == 2 || potential_prime == 3) return true;
     if (potential_prime % 2 == 0) return false;
     
-    // Simple Miller-Rabin implementation
+    // Write n-1 as d * 2^s
+    unsigned long long d = potential_prime - 1;
+    long long s = 0;
+    while (d % 2 == 0) {
+        d /= 2;
+        s++;
+    }
+    
+    // Miller-Rabin test
     for (int round = 0; round < num_rounds; round++) {
         // Use a simple deterministic set of bases for small numbers
         unsigned long long a;
@@ -83,20 +91,38 @@ static bool cpu_miller_rabin(long long potential_prime, int num_rounds) {
         
         if (a >= potential_prime - 2) continue;
         
-        // Compute a^(potential_prime-1) mod potential_prime
-        unsigned long long result = 1;
+        // Compute a^d mod n
+        unsigned long long x = 1;
         unsigned long long base = a % potential_prime;
-        unsigned long long exp = potential_prime - 1;
+        unsigned long long exp = d;
         
         while (exp > 0) {
             if (exp & 1) {
-                result = (result * base) % potential_prime;
+                __uint128_t temp = (__uint128_t)x * base;
+                x = temp % potential_prime;
             }
-            base = (base * base) % potential_prime;
+            __uint128_t temp = (__uint128_t)base * base;
+            base = temp % potential_prime;
             exp >>= 1;
         }
         
-        if (result != 1) return false;
+        if (x == 1 || x == potential_prime - 1) {
+            continue;
+        }
+        
+        bool composite = true;
+        for (long long j = 0; j < s - 1; j++) {
+            __uint128_t temp = (__uint128_t)x * x;
+            x = temp % potential_prime;
+            if (x == potential_prime - 1) {
+                composite = false;
+                break;
+            }
+        }
+        
+        if (composite) {
+            return false;
+        }
     }
     
     return true;
@@ -114,9 +140,11 @@ static bool cpu_fermat(long long potential_prime, int num_rounds) {
         
         while (exp > 0) {
             if (exp & 1) {
-                result = (result * base) % potential_prime;
+                __uint128_t temp = (__uint128_t)result * base;
+                result = temp % potential_prime;
             }
-            base = (base * base) % potential_prime;
+            __uint128_t temp = (__uint128_t)base * base;
+            base = temp % potential_prime;
             exp >>= 1;
         }
         
