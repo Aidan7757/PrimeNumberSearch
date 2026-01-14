@@ -16,15 +16,11 @@ add_executable(PrimeNumberSearch
         src/models.c
         src/models.h
         tests/search_methods_openmp_test.c
-        src/search_methods_cuda.cu
-        src/search_methods_cuda.cu
-        src/fft_multiply.cu
-        src/schonhage_strassen.cu
-        src/schonhage_strassen_host.c
-        src/search_methods_cuda_host.c
-        src/search_methods_mpi.c
-        cuda_prime_search.c
-        fast_mul_demo.c)
+        src/fft_multiply_cpu.c
+        src/fft_multiply_cpu.h
+        src/schonhage_strassen_cpu.c
+        src/schonhage_strassen_cpu.h
+)
 
 # Add OpenMP flags directly
 target_compile_options(PrimeNumberSearch PRIVATE -fopenmp)

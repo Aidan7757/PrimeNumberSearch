@@ -1,8 +1,11 @@
 #include <math.h>
+// Skip OpenMP for CPU-only version
 #include <omp.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include "models.h"
@@ -15,16 +18,21 @@
  * @return true or false on if the number is detected to be prime or not.
  */
 bool naive_check(const long long potential_prime, struct Config* config) {
+    printf("Starting Naive Check Prime Search with config:\n\t "
+           "Lower Bound: %lli\n\t Upper Bound: %lli\n\t Threads: %i\n\t"
+               " Rounds: %i\n", config->lower_range, config->max_range,
+               config->num_threads, config->num_rounds);
     if (potential_prime <= 1) return false;
     if (potential_prime == 2) return true;
     if (potential_prime % 2 == 0) return false;
 
     bool overall_result = true;
 
+    // OpenMP version using algorithm selection
     #pragma omp parallel num_threads(config->num_threads)
     #pragma omp parallel for
     for (size_t i = 2; i < potential_prime - 1; ++i) {
-        if (potential_prime % i == 0) overall_result = false;
+        if (mod_mul((unsigned long long)potential_prime, i, (unsigned long long)potential_prime) == 0) overall_result = false;
     }
     return overall_result;
 }
@@ -37,7 +45,11 @@ bool naive_check(const long long potential_prime, struct Config* config) {
  * @param config settings.
  * @return true or false on if likely to be prime or not.
  */
-bool miller_rabin(const long long potential_prime, const struct Config* config) {
+bool miller_rabin(const long long potential_prime, struct Config* config) {
+    printf("Starting Miller Rabin Prime Search with config:\n\t "
+           "Lower Bound: %lli\n\t Upper Bound: %lli\n\t Threads: %i\n\t"
+               " Rounds: %i\n", config->lower_range, config->max_range,
+               config->num_threads, config->num_rounds);
     // Handle base cases
     if (potential_prime <= 1) return false;
     if (potential_prime == 2 || potential_prime == 3) return true;
@@ -50,7 +62,7 @@ bool miller_rabin(const long long potential_prime, const struct Config* config) 
     // Perform k rounds of testing
     for (size_t round = 0; round < config->num_rounds; ++round) {
         // Pick random witness a in range [2, potential_prime - 2]
-        unsigned int seed = (unsigned int)(time(NULL) + round + omp_get_thread_num());
+        unsigned int seed = (unsigned int)(time(NULL) + round);
         const unsigned long long a = (rand_r(&seed) % (potential_prime - 3)) + 2;
 
         // Compute x = a^d mod potential_prime
@@ -87,13 +99,18 @@ bool miller_rabin(const long long potential_prime, const struct Config* config) 
  * @param config struct config.
  * @return true or false if the number is prime.
  */
-bool fermat(const long long potential_prime, const struct Config* config) {
+bool fermat(const long long potential_prime, struct Config* config) {
+    printf("Starting Fermat Prime Search with config:\n\t "
+           "Lower Bound: %lli\n\t Upper Bound: %lli\n\t Threads: %i\n\t"
+               " Rounds: %i\n", config->lower_range, config->max_range,
+               config->num_threads, config->num_rounds);
     if (potential_prime == 1) return false;
     if (potential_prime == 2 || potential_prime == 3) return true;
     if (potential_prime % 2 == 0) return false;
 
     for (size_t i = 2; i < config->num_rounds; ++i) {
         unsigned int seed = (unsigned int)(time(NULL) + i + omp_get_thread_num());
+
         const unsigned long long a = (rand_r(&seed) % (potential_prime - 3)) + 2;
         const unsigned long long result = mod_pow(a, potential_prime - 1, potential_prime);
         if (result != 1) return false;
@@ -108,7 +125,11 @@ bool fermat(const long long potential_prime, const struct Config* config) {
 
  * @return
  */
-bool gauss_euler(const long long potential_prime) {
+bool gauss_euler(const long long potential_prime, struct Config* config) {
+    printf("Starting Gauss Euler Prime Search with config:\n\t "
+           "Lower Bound: %lli\n\t Upper Bound: %lli\n\t Threads: %i\n\t"
+               " Rounds: %i\n", config->lower_range, config->max_range,
+               config->num_threads, config->num_rounds);
     if (potential_prime == 2) return true;
     if (!(potential_prime & 1) || potential_prime < 2) return false;
 
@@ -179,8 +200,9 @@ bool gauss_euler(const long long potential_prime) {
     return true;
 }
 
+
 /**
- * Combined Miller-Rabin and Gauss-Euler primality test.
+ * Miller-Rabin and Gauss-Euler primality test.
  * Hybrid approach combining both methods for enhanced primality testing.
  *
  * Link: https://arxiv.org/pdf/2311.07048
@@ -189,7 +211,11 @@ bool gauss_euler(const long long potential_prime) {
  * @param config struct config.
  * @return true or false if the number is prime.
  */
-bool mr_ge(const long long potential_prime) {
+bool mr_ge(const long long potential_prime, struct Config* config) {
+    printf("Starting MR GE Prime Search with config:\n\t "
+           "Lower Bound: %lli\n\t Upper Bound: %lli\n\t Threads: %i\n\t"
+               " Rounds: %i\n", config->lower_range, config->max_range,
+               config->num_threads, config->num_rounds);
     if (potential_prime == 2 || potential_prime == 3 ||
         potential_prime == 5 || potential_prime == 7) {
         return true;
