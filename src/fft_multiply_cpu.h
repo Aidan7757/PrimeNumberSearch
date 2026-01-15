@@ -21,7 +21,7 @@ typedef struct {
 
 // CPU large integer representation
 typedef struct {
-    uint64_t coeffs[FFT_CPU_MAX_COEFFS];
+    __int128_t coeffs[FFT_CPU_MAX_COEFFS];
     int num_coeffs;
     int bit_shift;
 } cpu_large_int_t;
@@ -32,7 +32,7 @@ void cpu_complex_add(cpu_complex_t a, cpu_complex_t b, cpu_complex_t* result);
 void cpu_complex_mul(cpu_complex_t a, cpu_complex_t b, cpu_complex_t* result);
 
 // Main CPU FFT multiplication function
-uint64_t cpu_fft_multiply_impl(uint64_t a, uint64_t b);
+__int128_t cpu_fft_multiply_impl(__int128_t a, __int128_t b);
 
 // Wrapper that matches CUDA interface
-void fft_multiply(uint64_t a, uint64_t b, uint64_t* result);
+void fft_multiply(__int128_t a, __int128_t b, __int128_t* result);

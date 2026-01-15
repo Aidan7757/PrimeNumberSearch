@@ -20,6 +20,8 @@ add_executable(PrimeNumberSearch
         src/fft_multiply_cpu.h
         src/schonhage_strassen_cpu.c
         src/schonhage_strassen_cpu.h
+        src/bn.c
+        src/bn.h
 )
 
 # Add OpenMP flags directly

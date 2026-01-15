@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "schonhage_strassen_cpu.h"
 
 #ifndef M_PI
@@ -12,7 +13,7 @@
 // Split numbers into polynomial coefficients, apply FFT, then reconstruct
 
 // Split number into polynomial coefficients
-static void cpu_ss_split_number(uint64_t num, cpu_polynomial_t* poly) {
+static void cpu_ss_split_number(__int128_t num, cpu_polynomial_t* poly) {
     memset(poly->coeffs, 0, sizeof(poly->coeffs));
     poly->num_coeffs = 0;
     poly->chunk_size = SS_CPU_BASE_CHUNK;
@@ -140,9 +141,9 @@ static void ss_pointwise_multiply(cpu_polynomial_t* a, cpu_polynomial_t* b, cpu_
     result->num_coeffs = a->num_coeffs + b->num_coeffs;
     result->chunk_size = a->chunk_size;
     
-    uint64_t carry = 0;
+    __int128_t carry = 0;
     for (int i = 0; i < result->num_coeffs; i++) {
-        uint64_t value = (uint64_t)round(ws_result.real[i]) + carry;
+        __int128_t value = (__int128_t)round(ws_result.real[i]) + carry;
         result->coeffs[i] = value & ((1ULL << result->chunk_size) - 1);
         carry = value >> result->chunk_size;
     }
@@ -161,10 +162,7 @@ static void ss_polynomial_mul(cpu_polynomial_t* a, cpu_polynomial_t* b, cpu_poly
 }
 
 // Main Schönhage-Strassen multiplication implementation
-static uint64_t cpu_schonhage_strassen_mul_impl(uint64_t a, uint64_t b, uint64_t mod) {
-    // For demonstration with 64-bit numbers
-    // In practice, SS algorithm is most efficient for very large numbers (> 2^16 bits)
-    // This implementation shows the algorithm structure
+__int128_t ss_mul(__int128_t a, __int128_t b, __int128_t mod) {
     
     cpu_polynomial_t poly_a, poly_b, result;
     
@@ -176,9 +174,9 @@ static uint64_t cpu_schonhage_strassen_mul_impl(uint64_t a, uint64_t b, uint64_t
     ss_polynomial_mul(&poly_a, &poly_b, &result);
     
     // Reconstruct the product
-    uint64_t product = 0;
+    __int128_t product = 0;
     for (int i = 0; i < result.num_coeffs; i++) {
-        product += ((uint64_t)result.coeffs[i]) << (i * result.chunk_size);
+        product += ((__int128_t)result.coeffs[i]) << (i * result.chunk_size);
     }
     
     // Apply modulo
@@ -187,9 +185,4 @@ static uint64_t cpu_schonhage_strassen_mul_impl(uint64_t a, uint64_t b, uint64_t
     }
     
     return product;
-}
-
-// Wrapper that matches CUDA interface
-uint64_t schonhage_strassen_mul(uint64_t a, uint64_t b, uint64_t mod) {
-    return cpu_schonhage_strassen_mul_impl(a, b, mod);
 }

@@ -89,7 +89,7 @@ void cpu_fft_radix2(cpu_complex_t* data, int n, int direction) {
 }
 
 
-static uint64_t cpu_fft_multiply_impl(uint64_t a, uint64_t b) {
+__int128_t cpu_fft_multiply_impl(__int128_t a, __int128_t b) {
     cpu_large_int_t x, y;
     x.num_coeffs = 0;
     y.num_coeffs = 0;
@@ -97,8 +97,8 @@ static uint64_t cpu_fft_multiply_impl(uint64_t a, uint64_t b) {
     y.bit_shift = FFT_CPU_BITS;
     
     // Split into coefficients
-    uint64_t temp_a = a;
-    uint64_t temp_b = b;
+    __int128_t temp_a = a;
+    __int128_t temp_b = b;
     for (int i = 0; i < FFT_CPU_MAX_COEFFS && (temp_a > 0 || temp_b > 0); i++) {
         if (temp_a > 0) {
             x.coeffs[i] = temp_a & ((1ULL << FFT_CPU_BITS) - 1);
@@ -116,6 +116,6 @@ static uint64_t cpu_fft_multiply_impl(uint64_t a, uint64_t b) {
     return (a * b);
 }
 
-void fft_multiply(uint64_t a, uint64_t b, uint64_t* result) {
+void fft_multiply(__int128_t a, __int128_t b, __int128_t* result) {
     *result = cpu_fft_multiply_impl(a, b);
 }

@@ -1,14 +1,12 @@
+#ifndef UTILS_H
+#define UTILS_H
 
-// Modular exponentiation: computes (base^exp) % mod
-#pragma once
-const extern int TEST_PRIMES[];
-const extern int TEST_COMPOSITE[];
-const extern size_t TEST_ARRAY_SIZES;
+#include <stdint.h>
+#include "models.h"  // This brings in the Config typedef
 
-unsigned long long mod_mul(unsigned long long a, unsigned long long b, unsigned long long mod);
+// Use Config, NOT struct Config
+__int128_t mod_mul(__int128_t a, __int128_t b, __int128_t mod, Config* config);
+__int128_t mod_pow(__int128_t base, __int128_t exp, __int128_t mod, Config* config);
+long factor_out_twos(__int128_t n, __int128_t* d);
 
-unsigned long long mod_pow(unsigned long long base, unsigned long long exp, unsigned long long mod);
-
-unsigned long long non_mod_pow(unsigned long long base, unsigned long long exp);
-
-long factor_out_twos(unsigned long long potential_prime, unsigned long long* d);
+#endif // UTILS_H

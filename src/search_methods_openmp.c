@@ -17,7 +17,7 @@
  * @param config config
  * @return true or false on if the number is detected to be prime or not.
  */
-bool naive_check(const long long potential_prime, struct Config* config) {
+bool naive_check(__int128_t potential_prime,  Config* config) {
     printf("Starting Naive Check Prime Search with config:\n\t "
            "Lower Bound: %lli\n\t Upper Bound: %lli\n\t Threads: %i\n\t"
                " Rounds: %i\n", config->lower_range, config->max_range,
@@ -29,10 +29,8 @@ bool naive_check(const long long potential_prime, struct Config* config) {
     bool overall_result = true;
 
     // OpenMP version using algorithm selection
-    #pragma omp parallel num_threads(config->num_threads)
-    #pragma omp parallel for
     for (size_t i = 2; i < potential_prime - 1; ++i) {
-        if (mod_mul((unsigned long long)potential_prime, i, (unsigned long long)potential_prime) == 0) overall_result = false;
+        if (mod_mul(potential_prime, i, potential_prime, config) == 0) overall_result = false;
     }
     return overall_result;
 }
@@ -45,28 +43,24 @@ bool naive_check(const long long potential_prime, struct Config* config) {
  * @param config settings.
  * @return true or false on if likely to be prime or not.
  */
-bool miller_rabin(const long long potential_prime, struct Config* config) {
-    printf("Starting Miller Rabin Prime Search with config:\n\t "
-           "Lower Bound: %lli\n\t Upper Bound: %lli\n\t Threads: %i\n\t"
-               " Rounds: %i\n", config->lower_range, config->max_range,
-               config->num_threads, config->num_rounds);
+bool miller_rabin(__int128_t potential_prime,  Config* config) {
     // Handle base cases
     if (potential_prime <= 1) return false;
     if (potential_prime == 2 || potential_prime == 3) return true;
     if (potential_prime % 2 == 0) return false;
 
     // Factor out powers of 2: potential_prime - 1 = 2^s * d
-    unsigned long long d;
+    __int128_t d;
     const long s = factor_out_twos(potential_prime, &d);
 
     // Perform k rounds of testing
     for (size_t round = 0; round < config->num_rounds; ++round) {
         // Pick random witness a in range [2, potential_prime - 2]
-        unsigned int seed = (unsigned int)(time(NULL) + round);
-        const unsigned long long a = (rand_r(&seed) % (potential_prime - 3)) + 2;
+        unsigned int seed = (unsigned int)(time(NULL) + round + omp_get_thread_num());
+        const __int128_t a = (rand_r(&seed) % (potential_prime - 3)) + 2;
 
         // Compute x = a^d mod potential_prime
-        unsigned long long x = mod_pow(a, d, potential_prime);
+        __int128_t x = mod_pow(a, d, potential_prime, config);
 
         if (x == 1 || x == potential_prime - 1) {
             continue;
@@ -75,7 +69,7 @@ bool miller_rabin(const long long potential_prime, struct Config* config) {
         // Square x repeatedly (s-1) times
         bool composite = true;
         for (long j = 0; j < s - 1; ++j) {
-            x = mod_pow(x, 2, potential_prime);
+            x = mod_mul(x, x, potential_prime, config);
 
             if (x == potential_prime - 1) {
                 composite = false;
@@ -96,23 +90,19 @@ bool miller_rabin(const long long potential_prime, struct Config* config) {
  * Link: https://en.wikipedia.org/wiki/Fermat_primality_test
  *
  * @param potential_prime the number to check primality of.
- * @param config struct config.
+ * @param config  config.
  * @return true or false if the number is prime.
  */
-bool fermat(const long long potential_prime, struct Config* config) {
-    printf("Starting Fermat Prime Search with config:\n\t "
-           "Lower Bound: %lli\n\t Upper Bound: %lli\n\t Threads: %i\n\t"
-               " Rounds: %i\n", config->lower_range, config->max_range,
-               config->num_threads, config->num_rounds);
+bool fermat(__int128_t potential_prime,  Config* config) {
     if (potential_prime == 1) return false;
     if (potential_prime == 2 || potential_prime == 3) return true;
     if (potential_prime % 2 == 0) return false;
 
-    for (size_t i = 2; i < config->num_rounds; ++i) {
+    for (size_t i = 0; i < config->num_rounds; ++i) {
         unsigned int seed = (unsigned int)(time(NULL) + i + omp_get_thread_num());
+        const __int128_t a = (rand_r(&seed) % (potential_prime - 3)) + 2;
+        const __int128_t result = mod_pow(a, potential_prime - 1, potential_prime, config);
 
-        const unsigned long long a = (rand_r(&seed) % (potential_prime - 3)) + 2;
-        const unsigned long long result = mod_pow(a, potential_prime - 1, potential_prime);
         if (result != 1) return false;
     }
     return true;
@@ -125,18 +115,14 @@ bool fermat(const long long potential_prime, struct Config* config) {
 
  * @return
  */
-bool gauss_euler(const long long potential_prime, struct Config* config) {
-    printf("Starting Gauss Euler Prime Search with config:\n\t "
-           "Lower Bound: %lli\n\t Upper Bound: %lli\n\t Threads: %i\n\t"
-               " Rounds: %i\n", config->lower_range, config->max_range,
-               config->num_threads, config->num_rounds);
+bool gauss_euler(__int128_t potential_prime,  Config* config) {
     if (potential_prime == 2) return true;
     if (!(potential_prime & 1) || potential_prime < 2) return false;
 
-    const unsigned long long n = (unsigned long long)potential_prime;
+    const __int128_t n = potential_prime;
 
     // Euler criterion for 2
-    unsigned long long t = mod_pow(2, (n - 1) / 2, n);
+    __int128_t t = mod_pow(2, (n - 1) / 2, n, config);
     if ((n % 8 == 1 || n % 8 == 7) && t != 1) {
         return false;
     }
@@ -146,54 +132,72 @@ bool gauss_euler(const long long potential_prime, struct Config* config) {
 
     // Check powers near sqrt(n) and sqrt(n/2)
     for (int j = 1; j <= 2; j++) {
-        unsigned long long a = (unsigned long long)sqrt((double)n / j);
-        for (unsigned long long i = a; i <= a + 1; i++) {
-            unsigned long long q = mod_pow(i, (n - 1) / 2, n);
+        __int128_t a = (__int128_t)sqrt((double)n / j);
+        for (__int128_t i = a; i <= a + 1; i++) {
+            __int128_t q = mod_pow(i, (n - 1) / 2, n, config);
             if (q != 1 && q != n - 1) return false;
         }
     }
 
     // Find first prime p1 ≡ 5 (mod 8) where n is not a quadratic residue
-    unsigned long long p1;
-    for (p1 = 5; ; p1 += 8) {
+    __int128_t p1;
+    for (p1 = 5; p1 < n; p1 += 8) {
         // Check if p1 is prime
-        unsigned long long i;
-        for (i = 3; i * i <= p1; i += 2) {
-            if (p1 % i == 0) break;
+        bool is_prime = true;
+        for (__int128_t i = 3; i * i <= p1; i += 2) {
+            if (p1 % i == 0) {
+                is_prime = false;
+                break;
+            }
         }
+        if (!is_prime) continue;
 
         // Check if n is a quadratic non-residue mod p1
-        unsigned long long j;
-        for (j = 1; j <= (p1 - 1) / 2; j++) {
-            if (i * i <= p1 || n % p1 == 0 || n % p1 == (j * j) % p1) break;
+        bool is_nonresidue = true;
+        if (n % p1 == 0) continue;
+
+        for (__int128_t j = 1; j <= (p1 - 1) / 2; j++) {
+            if (n % p1 == (j * j) % p1) {
+                is_nonresidue = false;
+                break;
+            }
         }
 
-        if (i * i > p1 && j > (p1 - 1) / 2) break;
+        if (is_nonresidue) break;
     }
 
-    if (mod_pow(p1, (n - 1) / 2, n) != n - 1) {
+    if (mod_pow(p1, (n - 1) / 2, n, config) != n - 1) {
         return false;
     }
 
     // Find first prime p2 ≡ 1 (mod 8) where n is not a quadratic residue
-    unsigned long long p2;
-    for (p2 = 17; ; p2 += 8) {
+    __int128_t p2;
+    for (p2 = 17; p2 < n; p2 += 8) {
         // Check if p2 is prime
-        unsigned long long i;
-        for (i = 3; i * i <= p2; i += 2) {
-            if (p2 % i == 0) break;
+        bool is_prime = true;
+        for (__int128_t i = 3; i * i <= p2; i += 2) {
+            if (p2 % i == 0) {
+                is_prime = false;
+                break;
+            }
         }
+        if (!is_prime) continue;
 
         // Check if n is a quadratic non-residue mod p2
-        unsigned long long j;
-        for (j = 1; j <= (p2 - 1) / 2; j++) {
-            if (i * i <= p2 || n % p2 == 0 || n % p2 == (j * j) % p2) break;
+        bool is_nonresidue = true;
+        if (n % p2 == 0) continue;
+
+        for (__int128_t j = 1; j <= (p2 - 1) / 2; j++) {
+            if (n % p2 == (j * j) % p2) {
+                is_nonresidue = false;
+                break;
+            }
         }
 
-        if (i * i > p2 && j > (p2 - 1) / 2) break;
+        if (is_nonresidue) break;
     }
 
-    if (mod_pow(p2, (n - 1) / 2, n) != n - 1) {
+    if (mod_pow(p2, (n - 1) / 2, n, config) != n - 1) {
         return false;
     }
 
@@ -208,41 +212,37 @@ bool gauss_euler(const long long potential_prime, struct Config* config) {
  * Link: https://arxiv.org/pdf/2311.07048
  *
  * @param potential_prime the number to check primality of.
- * @param config struct config.
+ * @param config  config.
  * @return true or false if the number is prime.
  */
-bool mr_ge(const long long potential_prime, struct Config* config) {
-    printf("Starting MR GE Prime Search with config:\n\t "
-           "Lower Bound: %lli\n\t Upper Bound: %lli\n\t Threads: %i\n\t"
-               " Rounds: %i\n", config->lower_range, config->max_range,
-               config->num_threads, config->num_rounds);
+bool mr_ge(__int128_t potential_prime,  Config* config) {
     if (potential_prime == 2 || potential_prime == 3 ||
         potential_prime == 5 || potential_prime == 7) {
         return true;
-    }
+        }
     if (potential_prime < 2 || !(potential_prime & 1)) {
         return false;
     }
 
-    const unsigned long long n = (unsigned long long)potential_prime;
+    const __int128_t n = potential_prime;
 
-    unsigned long long t = n - 1;
-    long long s = 0;
+    __int128_t t = n - 1;
+    __int128_t s = 0;
     while (!(t & 1)) {
         s++;
         t >>= 1;
     }
 
-    const unsigned long long m = (unsigned long long)sqrt((double)n);
-    const unsigned long long r = (unsigned long long)sqrt((double)n / 2);
-    const unsigned long long prime[5] = {2, m + 1, m - 1, r + 1, r - 1};
+    const __int128_t m = (__int128_t)sqrt((double)n);
+    const __int128_t r = (__int128_t)sqrt((double)n / 2);
+    const __int128_t prime[5] = {2, m + 1, m - 1, r + 1, r - 1};
 
     for (size_t x = 0; x < 5; x++) {
-        const unsigned long long a = prime[x];
-        unsigned long long b = mod_pow(a, t, n);
+        const __int128_t a = prime[x];
+        __int128_t b = mod_pow(a, t, n, config);
 
-        for (long long y = 1; y <= s; y++) {
-            const unsigned long long k = mod_mul(b, b, n);
+        for (__int128_t y = 1; y <= s; y++) {
+            const __int128_t k = mod_mul(b, b, n, config);
 
             if (k == 1 && b != 1 && b != n - 1) {
                 return false;
@@ -255,26 +255,33 @@ bool mr_ge(const long long potential_prime, struct Config* config) {
         }
     }
 
-    unsigned long long p;
-    for (p = 3; ; p += 4) {
-        unsigned long long i;
-        for (i = 3; i * i < p; i += 2) {
-            if (p % i == 0) break;
+    __int128_t p;
+    for (p = 3; p < n; p += 4) {
+        // Check if p is prime
+        bool is_prime = true;
+        for (__int128_t i = 3; i * i <= p; i += 2) {
+            if (p % i == 0) {
+                is_prime = false;
+                break;
+            }
         }
+        if (!is_prime) continue;
 
-        unsigned long long j;
-        for (j = 1; j <= (p - 1) / 2; j++) {
-            if (i * i < p || n % p == 0 || n % p == (j * j) % p) {
+        // Check if n is a quadratic non-residue mod p
+        bool is_nonresidue = true;
+        if (n % p == 0) continue;
+
+        for (__int128_t j = 1; j <= (p - 1) / 2; j++) {
+            if (n % p == (j * j) % p) {
+                is_nonresidue = false;
                 break;
             }
         }
 
-        if (i * i > p && j > (p - 1) / 2) {
-            break;
-        }
+        if (is_nonresidue) break;
     }
 
-    const unsigned long long d = mod_pow(p, (n - 1) / 2, n);
+    const __int128_t d = mod_pow(p, (n - 1) / 2, n, config);
     if ((n % 4 == 1 && d != n - 1) || (n % 4 == 3 && d != 1)) {
         return false;
     }
