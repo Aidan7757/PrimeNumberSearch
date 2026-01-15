@@ -11,8 +11,6 @@ include_directories(src)
 add_executable(PrimeNumberSearch
         src/search_methods_openmp.c
         src/search_methods_openmp.h
-        src/utils.h
-        src/utils.c
         src/models.c
         src/models.h
         tests/search_methods_openmp_test.c
