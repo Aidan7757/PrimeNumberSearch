@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "bn.h"
+
 // Define the enum
 typedef enum {
     MUL_NATIVE_INT128 = 0,
@@ -16,8 +18,8 @@ typedef enum {
 // Define Config as a typedef (NOT as 'struct Config')
 typedef struct {
     int num_threads;
-    __int128_t lower_range;
-    __int128_t max_range;
+    BigNum lower_range;  // Change from __int128_t
+    BigNum max_range;    // Change from __int128_t
     int num_rounds;
     MultiplicationMethod mul_method;
     bool enable_fft_ss;
